@@ -6,12 +6,14 @@ from textdistance import levenshtein
 
 load_dotenv()
 
+username = os.getenv('YOUR_REDDIT_USERNAME')
+
 reddit = praw.Reddit(
     client_id=os.getenv('YOUR_CLIENT_ID'),
     client_secret=os.getenv('YOUR_CLIENT_SECRET'),
     client_password=os.getenv('YOUR_REDDIT_PASSWORD'),
-    user_agent='BOT_DETECTOR/1.0 (by /u/TheDigimeister)',
-    username="thedigimeister"
+    username=username,
+    user_agent="BOT_DETECTOR/1.0 (by u/" + username + ")",
 )
 
 def calculate_bot_score(user, k=100):
@@ -42,13 +44,15 @@ def calculate_bot_score(user, k=100):
     return bot_score, bot_score > 0.65
 
 from flask import Flask, jsonify
+from flask_cors import CORS
 app = Flask(__name__)
+CORS(app, resources=r'/check_user/*')
 
 @app.route('/check_user/<username>')
 def check_user(username):
     user = reddit.redditor(username)
     score, is_bot = calculate_bot_score(user)
-    return jsonify({
+    response = jsonify({
         'score': round(score, 2),
         'is_bot': is_bot,
         'metrics': {
@@ -56,6 +60,8 @@ def check_user(username):
             'total_karma': user.link_karma + user.comment_karma
         }
     })
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

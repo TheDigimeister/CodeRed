@@ -1,8 +1,12 @@
 {
   "name": "CodeRed",
-  "manifest_version": 3,
   "version": "1.0",
-  "permissions": ["activeTab", "http://localhost:5000/"],
+  "manifest_version": 3,
+  "permissions": ["activeTab"],
+  "host_permissions": ["http://localhost:5000/check_user/*"],
+  "content_security_policy": {
+	  "extension_pages": "script-src 'self' ; connect-src 'self' http://localhost:5000/check_user/ ;"
+  },
   "content_scripts": [{
     "matches": ["*://*.reddit.com/*"],
     "js": ["content.js"]
