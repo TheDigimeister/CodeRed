@@ -1,15 +1,21 @@
 import praw
+import os
+import time
+from dotenv import load_dotenv
 from textdistance import levenshtein
 
+load_dotenv()
+
 reddit = praw.Reddit(
-    client_id='YOUR_CLIENT_ID',
-    client_secret='YOUR_CLIENT_SECRET',
-    user_agent='BOT_DETECTOR/1.0'
+    client_id=os.getenv('YOUR_CLIENT_ID'),
+    client_secret=os.getenv('YOUR_CLIENT_SECRET'),
+    client_password=os.getenv('YOUR_REDDIT_PASSWORD'),
+    user_agent='BOT_DETECTOR/1.0 (by /u/TheDigimeister)',
+    username="thedigimeister"
 )
 
-def calculate_bot_score(username, k=100):
-    user = reddit.redditor(username)
-    submissions = list(user.new(limit=k))
+def calculate_bot_score(user, k=100):
+    submissions = list(user.submissions.new(limit=k))
     
     if not submissions:
         return 0, False
@@ -18,7 +24,7 @@ def calculate_bot_score(username, k=100):
         'account_age': min((user.created_utc - 1136073600) / 1e8, 1),  # Normalized since 2006
         'karma_score': 1 - (user.link_karma + user.comment_karma) / 1e5,
         'content_similarity': sum(
-            levenshtein.normalized_similarity(a.body, b.body)
+            levenshtein.normalized_similarity(a.selftext, b.selftext)
             for a, b in zip(submissions, submissions[1:])
         ) / (len(submissions)-1) if len(submissions) > 1 else 0,
         'post_frequency': len(submissions) / (k * 24 * 3600)  # Posts per second
@@ -32,6 +38,7 @@ def calculate_bot_score(username, k=100):
     }
 
     bot_score = sum(scores[metric] * weights[metric] for metric in scores)
+    print(scores)
     return bot_score, bot_score > 0.65
 
 from flask import Flask, jsonify
@@ -39,7 +46,8 @@ app = Flask(__name__)
 
 @app.route('/check_user/<username>')
 def check_user(username):
-    score, is_bot = calculate_bot_score(username)
+    user = reddit.redditor(username)
+    score, is_bot = calculate_bot_score(user)
     return jsonify({
         'score': round(score, 2),
         'is_bot': is_bot,
@@ -49,3 +57,5 @@ def check_user(username):
         }
     })
 
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000)

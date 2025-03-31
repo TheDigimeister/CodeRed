@@ -1,5 +1,7 @@
 {
+  "name": "CodeRed",
   "manifest_version": 3,
+  "version": "1.0",
   "permissions": ["activeTab", "http://localhost:5000/"],
   "content_scripts": [{
     "matches": ["*://*.reddit.com/*"],
